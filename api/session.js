@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       blocked: blockedInProduction(),
       authed,
       db: !!backend() && authed,
-      ai: !!process.env.ANTHROPIC_API_KEY && authed,
+      ai: !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY) && authed,
     });
   }
 
