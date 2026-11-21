@@ -1,0 +1,24 @@
+{
+  "name": "campaign-command-center",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Campaign Command Center: campaigns, content calendar, AI planning, analytics and reports.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "node --check api/ai.js && node --check api/store.js && node --check api/session.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.12.0",
+    "chart.js": "4.4.1",
+    "jspdf": "2.5.1"
+  },
+  "devDependencies": {
+    "vite": "8.3.8"
+  }
+}

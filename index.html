@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campaign Command Center</title>
+<meta name="description" content="Plan, run and measure marketing campaigns: campaigns, content calendar, AI planning, analytics and reports.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="app" id="app">
+ <aside class="side" id="side">
+  <div class="brand"><i>↗</i><span>CAMPAIGN<br>COMMAND CENTER</span></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="sidefoot">
+   <label style="color:#BCD0FF">Viewing as (role preview)<select id="who"></select></label>
+   <span id="persist"></span>
+   <button class="btn o sm" id="signout" style="display:none;color:#fff;border-color:rgba(255,255,255,.3)">Sign out</button>
+  </div>
+ </aside>
+ <div class="main">
+  <div class="top">
+   <button class="btn o sm menu" id="menu">☰ Menu</button>
+   <div class="grow"><input id="gsearch" placeholder="Search campaigns, content, tasks…" style="max-width:380px"></div>
+   <button class="btn o sm" id="bell">🔔 <span id="bellc"></span></button>
+   <button class="btn o sm" id="theme">◐ Theme</button>
+  </div>
+  <div id="demobar"></div>
+  <div class="content" id="view"><div class="empty"><span class="spin"></span> Loading workspace…</div></div>
+ </div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
