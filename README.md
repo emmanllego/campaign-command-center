@@ -10,7 +10,7 @@ It was converted from a Claude Artifact. The interface and all features are carr
 | --- | --- |
 | Frontend | Vite 8, vanilla JavaScript (the Artifact's own architecture, kept as-is), Chart.js 4.4.1, jsPDF 2.5.1 |
 | Backend | Vercel serverless functions in `api/` (Node) |
-| AI | Anthropic API through `@anthropic-ai/sdk`, server-side only (`api/ai.js`) |
+| AI | Anthropic API (`@anthropic-ai/sdk`) or OpenAI Responses API, server-side only (`api/ai.js`) |
 | Database | Upstash Redis via its REST API (one JSON value per workspace key, same shape the Artifact used) |
 | Access | Shared workspace password, then a signed HttpOnly session cookie |
 
@@ -26,7 +26,7 @@ src/styles.css          The Artifact's styles
 public/favicon.svg
 api/session.js          GET status · POST sign in · DELETE sign out
 api/store.js            GET all workspace keys · PUT one key
-api/ai.js               POST prompt → Claude (JSON or text)
+api/ai.js               POST prompt → Claude or OpenAI (JSON or text)
 api/_lib/               Shared helpers: auth, storage, http (not deployed as routes)
 scripts/import-workspace.mjs   Imports a JSON export from the original Artifact
 vite.config.js          Build config, plus a dev middleware that serves api/ locally
@@ -46,7 +46,7 @@ npm install
 cp .env.example .env.local
 ```
 
-Edit `.env.local`: set `APP_PASSWORD`, and `ANTHROPIC_API_KEY` if you want the AI features. Leave the database variables empty to use a local file store (`.data/workspace.json`).
+Edit `.env.local`: set `APP_PASSWORD`, and `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` if you want the AI features. Leave the database variables empty to use a local file store (`.data/workspace.json`).
 
 ```bash
 npm run dev
@@ -66,7 +66,10 @@ npm run build
 | --- | --- | --- |
 | `APP_PASSWORD` | **Yes in production** | Workspace password. Without it, a Vercel production deployment refuses all data and AI requests, so an unprotected deploy can't leak data or spend your credits. |
 | `SESSION_SECRET` | Recommended | Signs session cookies. Defaults to `APP_PASSWORD`; generate one with `openssl rand -base64 32`. Changing it signs everyone out. |
-| `ANTHROPIC_API_KEY` | For AI features | Get one at https://platform.claude.com → API keys. Stays on the server. |
+| `ANTHROPIC_API_KEY` | For AI features (or OpenAI below) | Get one at https://platform.claude.com → API keys. Stays on the server. |
+| `OPENAI_API_KEY` | For AI features (or Anthropic above) | Get one at https://platform.openai.com → API keys. Used when no Anthropic key is set. |
+| `AI_PROVIDER` | No | `anthropic` or `openai`, to choose when both keys are set. |
+| `OPENAI_MODEL` | No | Defaults to `gpt-6-astra`. |
 | `ANTHROPIC_MODEL` | No | Defaults to `claude-opus-5-5`. |
 | `ANTHROPIC_EFFORT` | No | `low` / `medium` (default) / `high`. Higher is slower, more thorough and costs more. |
 | `KV_REST_API_URL`, `KV_REST_API_TOKEN` | For shared storage | Upstash Redis REST credentials. Added automatically when you connect Upstash from Vercel. `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` also work. |
@@ -105,13 +108,13 @@ Run `git status` before committing and check that no `.env*` file (other than `.
 
 1. Go to https://vercel.com/new and import the GitHub repository. Vercel detects Vite from `vercel.json`; keep the defaults (build `npm run build`, output `dist`).
 2. **Add the database:** Project → **Storage** → **Create** → **Upstash for Redis** (free tier is enough) → connect it to the project. This adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` for you.
-3. **Add the variables:** Project → **Settings** → **Environment Variables**: `APP_PASSWORD`, `SESSION_SECRET` and `ANTHROPIC_API_KEY` (Production, plus Preview if you use preview deploys).
+3. **Add the variables:** Project → **Settings** → **Environment Variables**: `APP_PASSWORD`, `SESSION_SECRET` and `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` (Production, plus Preview if you use preview deploys).
 4. **Deploy** (or redeploy after adding variables; changes apply only to new deployments).
 5. **Verify:**
    - Open the URL. You should get the sign-in screen; sign in with `APP_PASSWORD`.
    - The sidebar should read **● Saved to workspace database**. If it reads "Saved in this browser only", the Redis variables are missing.
    - Create a campaign, reload in another browser and sign in. The campaign should still be there.
-   - In AI Content Studio, generate something. An error naming `ANTHROPIC_API_KEY` means the key isn't set.
+   - In AI Content Studio, generate something. An error saying AI isn't configured means no AI key is set.
    - `https://YOUR-APP.vercel.app/api/session` should return JSON with `"authRequired": true`.
 
 AI requests can take a minute or more; `vercel.json` allows up to 300 seconds for `api/ai.js`. Vercel plans with a lower function limit cap it at their maximum.
@@ -131,7 +134,7 @@ This replaces the deployed workspace's data with the export.
 | Artifact (Claude runtime) | Standalone app |
 | --- | --- |
 | `claude.use("db")`: shared workspace storage | `api/store.js` → Upstash Redis (or `.data/` file locally). Same keys and JSON. Falls back to browser `localStorage` when no database is configured, as the Artifact did. |
-| `claude.use("sample")`: Claude on the viewer's account | `api/ai.js` → Anthropic API with your key, model `claude-opus-5-5`, server-side refusal fallback enabled. JSON responses are requested by instruction and parsed on the server. |
+| `claude.use("sample")`: Claude on the viewer's account | `api/ai.js` → Anthropic API with your key (model `claude-opus-5-5`, server-side refusal fallback enabled), or OpenAI (`gpt-6-astra`, JSON mode) if only an OpenAI key is set. JSON responses are parsed on the server. |
 | `claude.use("downloads")`: Claude's save dialog | A normal browser download (CSV, PDF, JSON). |
 | claude.ai sharing and access control | A workspace password plus a signed HttpOnly cookie (14 days), with a basic brute-force delay. |
 | Chart.js / jsPDF from a CDN | The same versions installed from npm and bundled. |
@@ -148,4 +151,4 @@ Small additions and fixes:
 - **Last write wins.** Each workspace key is saved as a whole. If two people edit the same area at the same moment, the later save wins, and others see changes after reloading. This is the same model the Artifact used.
 - **Ad-platform integrations are not live.** Meta, Google, TikTok and the other connectors have demo toggles only, and the webhook URL is stored but never called, as in the Artifact. A live connector needs an OAuth app with each provider and a server route that stores tokens and pulls metrics into `metrics`. Until then, use **Analytics → Import CSV**.
 - **Storage size:** each key is limited to about 4 MB (Vercel's request limit). The free Upstash tier is fine for thousands of metric rows.
-- **AI cost:** AI calls are billed to your Anthropic account. Lower `ANTHROPIC_EFFORT` to `low` to cut cost and latency.
+- **AI cost:** AI calls are billed to whichever provider's key you set. With Anthropic, lower `ANTHROPIC_EFFORT` to `low` to cut cost and latency.
